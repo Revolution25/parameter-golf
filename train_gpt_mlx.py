@@ -11,6 +11,8 @@ import json
 import math
 import os
 import pickle
+import platform
+import subprocess
 import sys
 import time
 import uuid
@@ -21,10 +23,57 @@ from pathlib import Path
 import numpy as np
 import sentencepiece as spm
 
-import mlx.core as mx
-import mlx.nn as nn
-import mlx.optimizers as optim
-from mlx.utils import tree_flatten, tree_unflatten
+MLX_IMPORT_ERROR: Exception | None = None
+try:
+    import mlx.core as mx
+    import mlx.nn as nn
+    import mlx.optimizers as optim
+    from mlx.utils import tree_flatten, tree_unflatten
+except Exception as exc:  # pragma: no cover - import/runtime environment dependent.
+    MLX_IMPORT_ERROR = exc
+    mx = None
+    nn = None
+    optim = None
+    tree_flatten = None
+    tree_unflatten = None
+
+
+def maybe_run_torch_fallback() -> None:
+    """
+    Run the PyTorch training script when MLX is unavailable or explicitly disabled.
+
+    This keeps `train_gpt_mlx.py` convenient for non-Apple environments where MLX is
+    not supported (for example many AMD/ROCm or CPU-only setups).
+    """
+    fallback_enabled = os.environ.get("MLX_FALLBACK_TO_TORCH", "1") != "0"
+    force_mlx = os.environ.get("FORCE_MLX", "0") == "1"
+    non_apple_host = sys.platform != "darwin" or platform.machine() not in {"arm64", "aarch64"}
+    should_fallback = fallback_enabled and not force_mlx and (MLX_IMPORT_ERROR is not None or non_apple_host)
+    if not should_fallback:
+        return
+
+    reason = "non-Apple host" if non_apple_host else f"MLX unavailable ({MLX_IMPORT_ERROR})"
+    print(
+        f"[train_gpt_mlx.py] MLX path skipped: {reason}. "
+        "Falling back to train_gpt.py (PyTorch).",
+        flush=True,
+    )
+    command = [sys.executable, "train_gpt.py"]
+    if "RANK" in os.environ or "LOCAL_RANK" in os.environ or "WORLD_SIZE" in os.environ:
+        command = ["torchrun"] + sys.argv
+        if command[1].endswith("train_gpt_mlx.py"):
+            command[1] = "train_gpt.py"
+    elif len(sys.argv) > 1:
+        command.extend(sys.argv[1:])
+    raise SystemExit(subprocess.call(command))
+
+
+maybe_run_torch_fallback()
+if mx is None:
+    raise RuntimeError(
+        "MLX could not be imported. Install MLX on Apple Silicon or run with "
+        "MLX_FALLBACK_TO_TORCH=1 to execute train_gpt.py instead."
+    ) from MLX_IMPORT_ERROR
 
 # ==============================================================================
 # SHARD FORMAT + COMPUTE DTYPE

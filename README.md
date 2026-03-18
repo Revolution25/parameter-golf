@@ -44,7 +44,7 @@ Happy training!
 
 If you have an Apple laptop or desktop with Apple Silicon, we've set up a simple MLX training script to help you start iterating locally.
 
-If you don't have a Mac with Apple Silicon, you can run an adapted version of this script without MLX support. Just ask [Codex](https://openai.com/codex/) to refactor it; the change is straightforward. It may still be fairly slow, so we recommend jumping straight to cloud GPUs with Runpod.
+If you don't have a Mac with Apple Silicon (for example AMD Ryzen + Radeon), `train_gpt_mlx.py` now auto-falls back to `train_gpt.py` so the same launch command still works. You can disable this behavior with `MLX_FALLBACK_TO_TORCH=0` or force the MLX path with `FORCE_MLX=1`.
 
 First, clone the repository, create a fresh Python environment, and install the packages needed for the MLX path plus dataset download:
 
@@ -66,7 +66,7 @@ python3 data/cached_challenge_fineweb.py --variant sp1024 --train-shards 10
 This populates `./data/datasets/fineweb10B_sp1024/` and `./data/tokenizers/`.
 By default this downloads the full validation split plus 80 training shards (8B tokens). For a smaller local smoke subset, pass `--train-shards 1`, for example `python3 data/cached_challenge_fineweb.py --variant sp1024 --train-shards 1`.
 
-Then run a small MLX training job:
+Then run a small local training job:
 
 ```bash
 RUN_ID=mlx_smoke \
