@@ -44,7 +44,9 @@ Happy training!
 
 If you have an Apple laptop or desktop with Apple Silicon, we've set up a simple MLX training script to help you start iterating locally.
 
+
 If you don't have a Mac with Apple Silicon (for example AMD Ryzen + Radeon), `train_gpt_mlx.py` now auto-falls back to `train_gpt.py` so the same launch command still works. You can disable this behavior with `MLX_FALLBACK_TO_TORCH=0` or force the MLX path with `FORCE_MLX=1`. The PyTorch script now supports `DEVICE=auto|cuda|cpu`, so you can run tiny local CPU experiments when CUDA is not available.
+
 
 First, clone the repository, create a fresh Python environment, and install the packages needed for the MLX path plus dataset download:
 
